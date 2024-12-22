@@ -86,3 +86,5 @@ Move the cursor, switch axioms, and add characters to explore grid behavior.
 ```bash
 open matrix_visualization.html
 ```
+
+Enjoy experimenting with layered grids and axioms! 🎮
