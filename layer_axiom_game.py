@@ -109,7 +109,7 @@ def get_outer_ring_cells(layer, axiom):
                 gx = x+center
                 gy = y+center
                 ch = grid[gy][gx]
-                if ch == ' ':
+                if ch in [' ', '', DEFAULT_CHAR]:
                     continue
                 ring.append((x,y,ch))
     return ring
@@ -191,11 +191,13 @@ def render_3d(filename="matrix_visualization.html"):
     # Build Plotly figure
     fig = go.Figure()
     for axiom, config in axiom_configs.items():
+        logger.info(traces[axiom]['text'])
+        #if traces[axiom]['text'] not in ["", None, DEFAULT_CHAR]:
         fig.add_trace(go.Scatter3d(
             x=traces[axiom]['x'],
             y=traces[axiom]['y'],
             z=traces[axiom]['z'],
-            mode='markers', # text»+markers | markers | text
+            mode='markers', # text+markers | markers | text
             text=traces[axiom]['text'],
             textfont=dict(size=12, color=config['color']),
             marker=dict(
