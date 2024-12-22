@@ -191,8 +191,6 @@ def render_3d(filename="matrix_visualization.html"):
     # Build Plotly figure
     fig = go.Figure()
     for axiom, config in axiom_configs.items():
-        logger.info(traces[axiom]['text'])
-        #if traces[axiom]['text'] not in ["", None, DEFAULT_CHAR]:
         fig.add_trace(go.Scatter3d(
             x=traces[axiom]['x'],
             y=traces[axiom]['y'],
