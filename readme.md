@@ -65,8 +65,36 @@ python layer_axiom_game.py
 
 ## Example:
 ```bash
-python layer_axiom_game.py --prefill --fillA=X,Y,Z --fillB=A,B --mode=random
+python layer_axiom_game.py --prefill --fillA=X,Y,Z --fillB=A,B --mode=full
 ```
+
+## Configuration Options
+
+### 1. Visualization Modes
+Control how each layer is rendered. Set modes for:
+- **Layer 0**
+- **Layer 1**
+- **Layer 1+**
+
+Options:
+- `lines`: Draw only lines connecting points.
+- `markers`: Show only markers (points).
+- `text`: Show only labels or text.
+- `markers+lines`: Combine markers and lines.
+
+### 2. Axiom Settings
+Customize visualization for each axiom (`A`, `B`, `C`, etc.). Configure:
+- **Color**: The color used for rendering.
+- **Label**: A descriptive name for the axiom.
+- **Opacity**: Transparency level for each axiom.
+
+### 3. General Configurations
+Set overall visualization preferences:
+- **Default Character**: The placeholder for empty cells.
+- **Center Character**: The character representing the center of layers.
+- **Opacity Values**: Adjust the transparency of the axiom layers.
+
+---
 
 ### 3D Visualization
 The 3D visualization of the grid is exported to matrix_visualization.html. Open the file in a web browser to explore the rendered layers interactively.
