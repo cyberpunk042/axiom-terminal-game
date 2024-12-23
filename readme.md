@@ -1,6 +1,6 @@
-# Layer Axiom Game
+# Axioms & Layers Simulation "Game"
 
-**Layer Axiom Game** is a console-based interactive game that allows you to navigate and manipulate layered grids with custom axioms, visualizing their structure in 2D and rendering them in 3D using Plotly.
+**Layered Axioms Simulation** is a console-based interactive game that allows you to navigate and manipulate layered grids with custom axioms, visualizing their structure in 2D and rendering them in 3D using Plotly.
 
 ---
 
