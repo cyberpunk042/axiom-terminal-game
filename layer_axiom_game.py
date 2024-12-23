@@ -33,14 +33,14 @@ LAYER_VISUALIZATION_MODES = {
 # Axiom Settings
 AXIOM_CONFIGS = {
     'A': {'color': 'red', 'label': 'A (XY plane)', 'opacity': 1},
-    'B': {'color': 'blue', 'label': 'B (YZ plane)', 'opacity': 0},
-    'C': {'color': 'green', 'label': 'C (XZ plane)', 'opacity': 0},
-    'D': {'color': 'purple', 'label': 'D (Diagonal plane Y1)', 'opacity': 0},
+    'B': {'color': 'blue', 'label': 'B (YZ plane)', 'opacity': 1},
+    'C': {'color': 'green', 'label': 'C (XZ plane)', 'opacity': 1},
+    'D': {'color': 'purple', 'label': 'D (Diagonal plane Y1)', 'opacity': 1},
     'E': {'color': 'brown', 'label': 'E (Diagonal plane Y2)', 'opacity': 1},
-    'F': {'color': 'black', 'label': 'F (Diagonal plane Y3)', 'opacity': 0},
-    'H': {'color': 'purple', 'label': 'H (Diagonal plane -Y1)', 'opacity': 0},
+    'F': {'color': 'black', 'label': 'F (Diagonal plane Y3)', 'opacity': 1},
+    'H': {'color': 'purple', 'label': 'H (Diagonal plane -Y1)', 'opacity': 1},
     'I': {'color': 'brown', 'label': 'I (Diagonal plane -Y2)', 'opacity': 1},
-    'J': {'color': 'black', 'label': 'J (Diagonal plane -Y3)', 'opacity': 0},
+    'J': {'color': 'black', 'label': 'J (Diagonal plane -Y3)', 'opacity': 1},
 }
 
 LAYER0_OPACITY = 1
