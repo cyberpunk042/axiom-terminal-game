@@ -145,9 +145,9 @@ def render_3d(filename="matrix_visualization.html"):
     """
     Render all layers but highlight Layer 1 as an individual layer.
     """
-    opacityABC = 0.6
-    opacityDEF = 0.6
-    opacityHIJ = 0.6
+    opacityABC = 1
+    opacityDEF = 1
+    opacityHIJ = 1
 
     # Axiom-specific configurations
     axiom_configs = {
@@ -209,8 +209,8 @@ def render_3d(filename="matrix_visualization.html"):
                 size=10,  # Larger marker size for Layer 1
                 color=config['color'],
                 symbol='circle',
-                opacity=1  # Higher opacity for emphasis
             ),
+            opacity=1,  # Higher opacity for emphasis
             name=f"Layer 1 - {config['label']}"
         ))
 
@@ -220,15 +220,15 @@ def render_3d(filename="matrix_visualization.html"):
             x=traces[axiom]['x'],
             y=traces[axiom]['y'],
             z=traces[axiom]['z'],
-            mode='markers',
+            mode='text',
             text=traces[axiom]['text'],
             textfont=dict(size=10, color=config['color']),
             marker=dict(
-                size=5,  # Standard marker size for other layers
+                size=12,  # Standard marker size for other layers
                 color=config['color'],
                 symbol='circle',
-                opacity=config['opacity']
             ),
+            opacity=config['opacity'],
             name=config['label']
         ))
 
