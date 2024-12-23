@@ -143,28 +143,30 @@ def calculate_coordinates(axiom, layer, angle, factor=math.sqrt(2)/2):
 
 def render_3d(filename="matrix_visualization.html"):
     """
-    Render all layers but highlight Layer 1 as an individual layer.
+    Render 3D visualization with separate traces for Layer 0, Layer 1, 
+    and individual traces for each Layer 1+ (not linked across layers).
     """
-    opacityABC = 1
-    opacityDEF = 1
-    opacityHIJ = 1
+    opacityADH = 1
+    opacityBEI = 1
+    opacityCFJ = 1
 
     # Axiom-specific configurations
     axiom_configs = {
-        'A': {'color': 'red', 'label': 'A (XY plane)', 'opacity': opacityABC},
-        'B': {'color': 'blue', 'label': 'B (YZ plane)', 'opacity': opacityABC},
-        'C': {'color': 'green', 'label': 'C (XZ plane)', 'opacity': opacityABC},
-        'D': {'color': 'purple', 'label': 'D (Diagonal plane Y1)', 'opacity': opacityDEF},
-        'E': {'color': 'brown', 'label': 'E (Diagonal plane Y2)', 'opacity': opacityDEF},
-        'F': {'color': 'black', 'label': 'F (Diagonal plane Y3)', 'opacity': opacityDEF},
-        'H': {'color': 'purple', 'label': 'H (Diagonal plane -Y1)', 'opacity': opacityHIJ},
-        'I': {'color': 'brown', 'label': 'I (Diagonal plane -Y2)', 'opacity': opacityHIJ},
-        'J': {'color': 'black', 'label': 'J (Diagonal plane -Y3)', 'opacity': opacityHIJ},
+        'A': {'color': 'red', 'label': 'A (XY plane)', 'opacity': opacityADH},
+        'B': {'color': 'blue', 'label': 'B (YZ plane)', 'opacity': opacityBEI},
+        'C': {'color': 'green', 'label': 'C (XZ plane)', 'opacity': opacityCFJ},
+        'D': {'color': 'purple', 'label': 'D (Diagonal plane Y1)', 'opacity': opacityADH},
+        'E': {'color': 'brown', 'label': 'E (Diagonal plane Y2)', 'opacity': opacityBEI},
+        'F': {'color': 'black', 'label': 'F (Diagonal plane Y3)', 'opacity': opacityCFJ},
+        'H': {'color': 'purple', 'label': 'H (Diagonal plane -Y1)', 'opacity': opacityADH},
+        'I': {'color': 'brown', 'label': 'I (Diagonal plane -Y2)', 'opacity': opacityBEI},
+        'J': {'color': 'black', 'label': 'J (Diagonal plane -Y3)', 'opacity': opacityCFJ},
     }
 
     # Initialize data structures for traces
-    traces = {axiom: {'x': [], 'y': [], 'z': [], 'text': []} for axiom in axiom_configs}
-    layer_1_traces = {axiom: {'x': [], 'y': [], 'z': [], 'text': []} for axiom in axiom_configs}
+    layer_0_trace = {axiom: {'x': [], 'y': [], 'z': [], 'text': []} for axiom in axiom_configs}
+    layer_1_trace = {axiom: {'x': [], 'y': [], 'z': [], 'text': []} for axiom in axiom_configs}
+    layer_1_plus_traces = []  # Individual traces for layers > 1
 
     max_layer = max(layer for layer, _ in data.keys())
 
@@ -173,63 +175,113 @@ def render_3d(filename="matrix_visualization.html"):
         if not ring_cells:
             continue
 
+        # Sort the ring cells for proper line tracing
         ring_cells.sort(key=lambda c: math.atan2(c[1], c[0]))
-        count = len(ring_cells)
+        
+        # Trace data
+        x_vals, y_vals, z_vals, text_vals = [], [], [], []
         for i, (ox, oy, ch) in enumerate(ring_cells):
-            angle = 2 * math.pi * i / count
+            angle = 2 * math.pi * i / len(ring_cells)
             x, y, z = calculate_coordinates(axiom, layer, angle)
-            if layer == 1:
-                # Add Layer 1 data to its specific traces
-                layer_1_traces[axiom]['x'].append(x)
-                layer_1_traces[axiom]['y'].append(y)
-                layer_1_traces[axiom]['z'].append(z)
-                if ch not in [DEFAULT_CHAR]:
-                    layer_1_traces[axiom]['text'].append(ch)
-            else:
-                # Add other layers' data to general traces
-                traces[axiom]['x'].append(x)
-                traces[axiom]['y'].append(y)
-                traces[axiom]['z'].append(z)
-                if ch not in [DEFAULT_CHAR]:
-                    traces[axiom]['text'].append(ch)
+            x_vals.append(x)
+            y_vals.append(y)
+            z_vals.append(z)
+            text_vals.append(ch)
+
+        # Close the loop for layers > 0
+        if len(x_vals) > 1:
+            x_vals.append(x_vals[0])
+            y_vals.append(y_vals[0])
+            z_vals.append(z_vals[0])
+
+        # Assign to the appropriate trace
+        if layer == 0:
+            layer_0_trace[axiom]['x'].extend(x_vals)
+            layer_0_trace[axiom]['y'].extend(y_vals)
+            layer_0_trace[axiom]['z'].extend(z_vals)
+            layer_0_trace[axiom]['text'].extend(text_vals)
+        elif layer == 1:
+            layer_1_trace[axiom]['x'].extend(x_vals)
+            layer_1_trace[axiom]['y'].extend(y_vals)
+            layer_1_trace[axiom]['z'].extend(z_vals)
+            layer_1_trace[axiom]['text'].extend(text_vals)
+        else:
+            # Create a separate trace for each Layer 1+
+            layer_1_plus_traces.append({
+                'axiom': axiom,
+                'layer': layer,
+                'x': x_vals,
+                'y': y_vals,
+                'z': z_vals,
+                'text': text_vals
+            })
 
     # Build Plotly figure
     fig = go.Figure()
 
-    # Add Layer 1 traces first with higher visibility (e.g., larger markers)
+    # Add Layer 0 traces
     for axiom, config in axiom_configs.items():
         fig.add_trace(go.Scatter3d(
-            x=layer_1_traces[axiom]['x'],
-            y=layer_1_traces[axiom]['y'],
-            z=layer_1_traces[axiom]['z'],
+            x=layer_0_trace[axiom]['x'],
+            y=layer_0_trace[axiom]['y'],
+            z=layer_0_trace[axiom]['z'],
             mode='markers',
-            text=layer_1_traces[axiom]['text'],
-            textfont=dict(size=12, color=config['color']),
+            text=layer_0_trace[axiom]['text'],
+            textfont=dict(size=10, color=config['color']),
             marker=dict(
-                size=10,  # Larger marker size for Layer 1
+                size=10,
                 color=config['color'],
                 symbol='circle',
+                opacity=1
             ),
-            opacity=1,  # Higher opacity for emphasis
+            name=f"Layer 0 - {config['label']}"
+        ))
+
+    # Add Layer 1 traces
+    for axiom, config in axiom_configs.items():
+        fig.add_trace(go.Scatter3d(
+            x=layer_1_trace[axiom]['x'],
+            y=layer_1_trace[axiom]['y'],
+            z=layer_1_trace[axiom]['z'],
+            mode='markers',
+            text=layer_1_trace[axiom]['text'],
+            textfont=dict(size=12, color=config['color']),
+            marker=dict(
+                size=8,
+                color=config['color'],
+                symbol='circle',
+                opacity=1
+            ),
+            line=dict(
+                color=config['color'],
+                width=3
+            ),
+            opacity=1,
             name=f"Layer 1 - {config['label']}"
         ))
 
-    # Add all other layers
-    for axiom, config in axiom_configs.items():
+    # Add individual Layer 1+ traces
+    for trace in layer_1_plus_traces:
+        config = axiom_configs[trace['axiom']]
         fig.add_trace(go.Scatter3d(
-            x=traces[axiom]['x'],
-            y=traces[axiom]['y'],
-            z=traces[axiom]['z'],
-            mode='text',
-            text=traces[axiom]['text'],
+            x=trace['x'],
+            y=trace['y'],
+            z=trace['z'],
+            mode='lines',
+            text=trace['text'],
             textfont=dict(size=10, color=config['color']),
             marker=dict(
-                size=12,  # Standard marker size for other layers
+                size=5,
                 color=config['color'],
                 symbol='circle',
+                opacity=config['opacity']
+            ),
+            line=dict(
+                color=config['color'],
+                width=2
             ),
             opacity=config['opacity'],
-            name=config['label']
+            name=f"Layer {trace['layer']} - {config['label']}"
         ))
 
     fig.update_layout(
@@ -238,12 +290,13 @@ def render_3d(filename="matrix_visualization.html"):
             yaxis=dict(title="Y", range=[-max_layer, max_layer]),
             zaxis=dict(title="Z", range=[-max_layer, max_layer]),
         ),
-        title="3D Visualization with Layer 1 Highlighted",
+        title="3D Visualization with Separate Traces for Layer 1+",
         width=1000, height=800
     )
 
     fig.write_html(filename)
-    print(f"Visualization with Layer 1 highlighted saved to {filename}.")
+    print(f"Visualization with separate traces for Layer 1+ saved to {filename}.")
+
 
 
 def draw_interface(stdscr):
