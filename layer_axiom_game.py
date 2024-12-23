@@ -5,24 +5,82 @@ import plotly.graph_objects as go
 import sys
 import random
 
+# Other Configurations
+LOG_FILENAME = "layer_axiom_game.log"
+OUTPUT_FILENAME = "matrix_visualization.html"
+
 logging.basicConfig(
-    filename="layer_axiom_game.log",
+    filename=LOG_FILENAME,
     filemode="w",
     format="%(asctime)s [%(levelname)s] %(message)s",
     level=logging.DEBUG
 )
 logger = logging.getLogger(__name__)
 
-DEFAULT_CHAR = "◦"
+DEFAULT_CHAR = "◦" # "\u25E6"  # Unicode bullet character
 CENTER_CHAR = "O"
 
-data = {}
+# Configuration Section
+# =====================
+
+# Visualization Modes for Each Layer
+LAYER_VISUALIZATION_MODES = {
+    "layer_0": "markers",         # Options: "lines", "markers", "text", "lines+markers"
+    "layer_1": "lines+markers",
+    "layer_1_plus": "lines",
+}
+
+# Axiom Settings
+AXIOM_CONFIGS = {
+    'A': {'color': 'red', 'label': 'A (XY plane)', 'opacity': 1},
+    'B': {'color': 'blue', 'label': 'B (YZ plane)', 'opacity': 0},
+    'C': {'color': 'green', 'label': 'C (XZ plane)', 'opacity': 0},
+    'D': {'color': 'purple', 'label': 'D (Diagonal plane Y1)', 'opacity': 0},
+    'E': {'color': 'brown', 'label': 'E (Diagonal plane Y2)', 'opacity': 1},
+    'F': {'color': 'black', 'label': 'F (Diagonal plane Y3)', 'opacity': 0},
+    'H': {'color': 'purple', 'label': 'H (Diagonal plane -Y1)', 'opacity': 0},
+    'I': {'color': 'brown', 'label': 'I (Diagonal plane -Y2)', 'opacity': 1},
+    'J': {'color': 'black', 'label': 'J (Diagonal plane -Y3)', 'opacity': 0},
+}
+
+LAYER0_OPACITY = 1
+LAYER1_OPACITY = 1
+
+# Prefill Settings
+PREFILL = True
+FILL_MODE = "full"  # Options: "full", "partial", "random"
+FILLS = {
+    'A': ['B'],
+    'B': ['B'],
+    'C': ['C'],
+    'D': ['D'],
+    'E': ['E'],
+    'F': ['F'],
+    'H': ['H'],
+    'I': ['I'],
+    'J': ['J'],
+}
+
+# =====================
+# End Configuration Section
+
+# Logging setup
+logging.basicConfig(
+    filename=LOG_FILENAME,
+    filemode="w",
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    level=logging.DEBUG
+)
+logger = logging.getLogger(__name__)
+
+# Global Data
 current_layer = 0
 current_axiom = 'A'
 cursor_x, cursor_y = 0, 0
+data = {}
 
 def layer_dimension(layer):
-    return 2*layer + 1
+    return 2 * layer + 1
 
 def create_layer_axiom(layer, axiom):
     dim = layer_dimension(layer)
@@ -33,9 +91,9 @@ def create_layer_axiom(layer, axiom):
         grid[0][0] = CENTER_CHAR
         read_only[0][0] = False
     else:
-        ensure_layer_axiom(layer-1, axiom)
-        prev_grid, prev_read_only = data[(layer-1, axiom)]
-        prev_dim = layer_dimension(layer-1)
+        ensure_layer_axiom(layer - 1, axiom)
+        prev_grid, prev_read_only = data[(layer - 1, axiom)]
+        prev_dim = layer_dimension(layer - 1)
         offset = (dim - prev_dim) // 2
 
         for py in range(prev_dim):
@@ -43,14 +101,170 @@ def create_layer_axiom(layer, axiom):
                 ch = prev_grid[py][px]
                 if ch == CENTER_CHAR:
                     ch = ' '
-                grid[py+offset][px+offset] = ch
-                read_only[py+offset][px+offset] = True
+                grid[py + offset][px + offset] = ch
+                read_only[py + offset][px + offset] = True
 
     data[(layer, axiom)] = (grid, read_only)
 
 def ensure_layer_axiom(layer, axiom):
     if (layer, axiom) not in data:
         create_layer_axiom(layer, axiom)
+
+def get_outer_ring_cells(layer, axiom):
+    grid, ro = data[(layer, axiom)]
+    dim = layer_dimension(layer)
+    center = layer
+    if layer == 0:
+        ch = grid[0][0]
+        return [(0, 0, ch)]
+    ring = []
+    N = layer
+    for y in range(-N, N + 1):
+        for x in range(-N, N + 1):
+            if max(abs(x), abs(y)) == N:
+                gx = x + center
+                gy = y + center
+                ch = grid[gy][gx]
+                if ch in [' ', '', DEFAULT_CHAR]:
+                    continue
+                ring.append((x, y, ch))
+    return ring
+
+def calculate_coordinates(axiom, layer, angle, factor=math.sqrt(2) / 2):
+    cosθ, sinθ = math.cos(angle), math.sin(angle)
+    if axiom == 'A':  # XY plane
+        return layer * cosθ, layer * sinθ, 0
+    elif axiom == 'B':  # YZ plane
+        return 0, layer * cosθ, layer * sinθ
+    elif axiom == 'C':  # XZ plane
+        return layer * cosθ, 0, layer * sinθ
+    elif axiom == 'D':  # Diagonal plane Y1
+        return layer * cosθ, layer * sinθ * factor, layer * sinθ * factor
+    elif axiom == 'E':  # Diagonal plane Y2
+        return layer * sinθ * factor, layer * cosθ, layer * sinθ * factor
+    elif axiom == 'F':  # Diagonal plane Y3
+        return layer * sinθ * factor, layer * sinθ * factor, layer * cosθ
+    elif axiom == 'H':  # Diagonal plane -Y1
+        return layer * cosθ, layer * sinθ * factor, -layer * sinθ * factor
+    elif axiom == 'I':  # Diagonal plane -Y2
+        return -layer * sinθ * factor, layer * cosθ, layer * sinθ * factor
+    elif axiom == 'J':  # Diagonal plane -Y3
+        return -layer * sinθ * factor, layer * sinθ * factor, layer * cosθ
+    else:
+        return 0, 0, 0  # Default case
+
+def render_3d(filename=OUTPUT_FILENAME):
+    layer_0_trace = {axiom: {'x': [], 'y': [], 'z': [], 'text': []} for axiom in AXIOM_CONFIGS}
+    layer_1_trace = {axiom: {'x': [], 'y': [], 'z': [], 'text': []} for axiom in AXIOM_CONFIGS}
+    layer_1_plus_traces = []
+
+    max_layer = max(layer for layer, _ in data.keys())
+
+    for (layer, axiom) in data.keys():
+        ring_cells = get_outer_ring_cells(layer, axiom)
+        if not ring_cells:
+            continue
+
+        ring_cells.sort(key=lambda c: math.atan2(c[1], c[0]))
+
+        x_vals, y_vals, z_vals, text_vals = [], [], [], []
+        for i, (ox, oy, ch) in enumerate(ring_cells):
+            angle = 2 * math.pi * i / len(ring_cells)
+            x, y, z = calculate_coordinates(axiom, layer, angle)
+            x_vals.append(x)
+            y_vals.append(y)
+            z_vals.append(z)
+            text_vals.append(ch)
+
+        if len(x_vals) > 1:
+            x_vals.append(x_vals[0])
+            y_vals.append(y_vals[0])
+            z_vals.append(z_vals[0])
+
+        if layer == 0:
+            layer_0_trace[axiom]['x'].extend(x_vals)
+            layer_0_trace[axiom]['y'].extend(y_vals)
+            layer_0_trace[axiom]['z'].extend(z_vals)
+            layer_0_trace[axiom]['text'].extend(text_vals)
+        elif layer == 1:
+            layer_1_trace[axiom]['x'].extend(x_vals)
+            layer_1_trace[axiom]['y'].extend(y_vals)
+            layer_1_trace[axiom]['z'].extend(z_vals)
+            layer_1_trace[axiom]['text'].extend(text_vals)
+        else:
+            layer_1_plus_traces.append({
+                'axiom': axiom,
+                'layer': layer,
+                'x': x_vals,
+                'y': y_vals,
+                'z': z_vals,
+                'text': text_vals
+            })
+
+    fig = go.Figure()
+
+    for axiom, config in AXIOM_CONFIGS.items():
+        fig.add_trace(go.Scatter3d(
+            x=layer_0_trace[axiom]['x'],
+            y=layer_0_trace[axiom]['y'],
+            z=layer_0_trace[axiom]['z'],
+            mode=LAYER_VISUALIZATION_MODES['layer_0'],
+            text=layer_0_trace[axiom]['text'],
+            marker=dict(
+                size=10,
+                color=config['color'],
+                symbol='circle'
+            ),
+            opacity=LAYER0_OPACITY,
+            name=f"Layer 0 - {config['label']}"
+        ))
+
+    for axiom, config in AXIOM_CONFIGS.items():
+        fig.add_trace(go.Scatter3d(
+            x=layer_1_trace[axiom]['x'],
+            y=layer_1_trace[axiom]['y'],
+            z=layer_1_trace[axiom]['z'],
+            mode=LAYER_VISUALIZATION_MODES['layer_1'],
+            text=layer_1_trace[axiom]['text'],
+            marker=dict(
+                size=8,
+                color=config['color'],
+                symbol='circle'
+            ),
+            opacity=LAYER1_OPACITY,
+            name=f"Layer 1 - {config['label']}"
+        ))
+
+    for trace in layer_1_plus_traces:
+        config = AXIOM_CONFIGS[trace['axiom']]
+        fig.add_trace(go.Scatter3d(
+            x=trace['x'],
+            y=trace['y'],
+            z=trace['z'],
+            mode=LAYER_VISUALIZATION_MODES['layer_1_plus'],
+            text=trace['text'],
+            marker=dict(
+                size=5,
+                color=config['color'],
+                symbol='circle'
+            ),
+            opacity=config['opacity'],
+            name=f"Layer {trace['layer']} - {config['label']}"
+        ))
+
+    fig.update_layout(
+        scene=dict(
+            xaxis=dict(title="X", range=[-max_layer, max_layer]),
+            yaxis=dict(title="Y", range=[-max_layer, max_layer]),
+            zaxis=dict(title="Z", range=[-max_layer, max_layer]),
+        ),
+        title="3D Visualization",
+        width=1000, height=800
+    )
+
+    fig.write_html(filename)
+    print(f"Visualization saved to {filename}.")
+
 
 def is_within_bounds(x, y):
     return (-current_layer <= x <= current_layer and -current_layer <= y <= current_layer)
@@ -113,190 +327,6 @@ def get_outer_ring_cells(layer, axiom):
                     continue
                 ring.append((x,y,ch))
     return ring
-
-def calculate_coordinates(axiom, layer, angle, factor=math.sqrt(2)/2):
-    """
-    Generalized function to calculate x, y, z coordinates based on the axiom type.
-    """
-    cosθ, sinθ = math.cos(angle), math.sin(angle)
-    if axiom == 'A':  # XY plane
-        return layer * cosθ, layer * sinθ, 0
-    elif axiom == 'B':  # YZ plane
-        return 0, layer * cosθ, layer * sinθ
-    elif axiom == 'C':  # XZ plane
-        return layer * cosθ, 0, layer * sinθ
-    elif axiom == 'D':  # Diagonal plane Y1
-        return layer * cosθ, layer * sinθ * factor, layer * sinθ * factor
-    elif axiom == 'E':  # Diagonal plane Y2
-        return layer * sinθ * factor, layer * cosθ, layer * sinθ * factor
-    elif axiom == 'F':  # Diagonal plane Y3
-        return layer * sinθ * factor, layer * sinθ * factor, layer * cosθ
-    elif axiom == 'H':  # Diagonal plane -Y1
-        return layer * cosθ, layer * sinθ * factor, -layer * sinθ * factor
-    elif axiom == 'I':  # Diagonal plane -Y2
-        return -layer * sinθ * factor, layer * cosθ, layer * sinθ * factor
-    elif axiom == 'J':  # Diagonal plane -Y3
-        return -layer * sinθ * factor, layer * sinθ * factor, layer * cosθ
-    else:
-        return 0, 0, 0  # Default case
-
-
-def render_3d(filename="matrix_visualization.html"):
-    """
-    Render 3D visualization with separate traces for Layer 0, Layer 1, 
-    and individual traces for each Layer 1+ (not linked across layers).
-    """
-    opacityADH = 1
-    opacityBEI = 1
-    opacityCFJ = 1
-
-    # Axiom-specific configurations
-    axiom_configs = {
-        'A': {'color': 'red', 'label': 'A (XY plane)', 'opacity': opacityADH},
-        'B': {'color': 'blue', 'label': 'B (YZ plane)', 'opacity': opacityBEI},
-        'C': {'color': 'green', 'label': 'C (XZ plane)', 'opacity': opacityCFJ},
-        'D': {'color': 'purple', 'label': 'D (Diagonal plane Y1)', 'opacity': opacityADH},
-        'E': {'color': 'brown', 'label': 'E (Diagonal plane Y2)', 'opacity': opacityBEI},
-        'F': {'color': 'black', 'label': 'F (Diagonal plane Y3)', 'opacity': opacityCFJ},
-        'H': {'color': 'purple', 'label': 'H (Diagonal plane -Y1)', 'opacity': opacityADH},
-        'I': {'color': 'brown', 'label': 'I (Diagonal plane -Y2)', 'opacity': opacityBEI},
-        'J': {'color': 'black', 'label': 'J (Diagonal plane -Y3)', 'opacity': opacityCFJ},
-    }
-
-    # Initialize data structures for traces
-    layer_0_trace = {axiom: {'x': [], 'y': [], 'z': [], 'text': []} for axiom in axiom_configs}
-    layer_1_trace = {axiom: {'x': [], 'y': [], 'z': [], 'text': []} for axiom in axiom_configs}
-    layer_1_plus_traces = []  # Individual traces for layers > 1
-
-    max_layer = max(layer for layer, _ in data.keys())
-
-    for (layer, axiom) in data.keys():
-        ring_cells = get_outer_ring_cells(layer, axiom)
-        if not ring_cells:
-            continue
-
-        # Sort the ring cells for proper line tracing
-        ring_cells.sort(key=lambda c: math.atan2(c[1], c[0]))
-        
-        # Trace data
-        x_vals, y_vals, z_vals, text_vals = [], [], [], []
-        for i, (ox, oy, ch) in enumerate(ring_cells):
-            angle = 2 * math.pi * i / len(ring_cells)
-            x, y, z = calculate_coordinates(axiom, layer, angle)
-            x_vals.append(x)
-            y_vals.append(y)
-            z_vals.append(z)
-            text_vals.append(ch)
-
-        # Close the loop for layers > 0
-        if len(x_vals) > 1:
-            x_vals.append(x_vals[0])
-            y_vals.append(y_vals[0])
-            z_vals.append(z_vals[0])
-
-        # Assign to the appropriate trace
-        if layer == 0:
-            layer_0_trace[axiom]['x'].extend(x_vals)
-            layer_0_trace[axiom]['y'].extend(y_vals)
-            layer_0_trace[axiom]['z'].extend(z_vals)
-            layer_0_trace[axiom]['text'].extend(text_vals)
-        elif layer == 1:
-            layer_1_trace[axiom]['x'].extend(x_vals)
-            layer_1_trace[axiom]['y'].extend(y_vals)
-            layer_1_trace[axiom]['z'].extend(z_vals)
-            layer_1_trace[axiom]['text'].extend(text_vals)
-        else:
-            # Create a separate trace for each Layer 1+
-            layer_1_plus_traces.append({
-                'axiom': axiom,
-                'layer': layer,
-                'x': x_vals,
-                'y': y_vals,
-                'z': z_vals,
-                'text': text_vals
-            })
-
-    # Build Plotly figure
-    fig = go.Figure()
-
-    # Add Layer 0 traces
-    for axiom, config in axiom_configs.items():
-        fig.add_trace(go.Scatter3d(
-            x=layer_0_trace[axiom]['x'],
-            y=layer_0_trace[axiom]['y'],
-            z=layer_0_trace[axiom]['z'],
-            mode='markers',
-            text=layer_0_trace[axiom]['text'],
-            textfont=dict(size=10, color=config['color']),
-            marker=dict(
-                size=10,
-                color=config['color'],
-                symbol='circle',
-                opacity=1
-            ),
-            name=f"Layer 0 - {config['label']}"
-        ))
-
-    # Add Layer 1 traces
-    for axiom, config in axiom_configs.items():
-        fig.add_trace(go.Scatter3d(
-            x=layer_1_trace[axiom]['x'],
-            y=layer_1_trace[axiom]['y'],
-            z=layer_1_trace[axiom]['z'],
-            mode='markers',
-            text=layer_1_trace[axiom]['text'],
-            textfont=dict(size=12, color=config['color']),
-            marker=dict(
-                size=8,
-                color=config['color'],
-                symbol='circle',
-                opacity=1
-            ),
-            line=dict(
-                color=config['color'],
-                width=3
-            ),
-            opacity=1,
-            name=f"Layer 1 - {config['label']}"
-        ))
-
-    # Add individual Layer 1+ traces
-    for trace in layer_1_plus_traces:
-        config = axiom_configs[trace['axiom']]
-        fig.add_trace(go.Scatter3d(
-            x=trace['x'],
-            y=trace['y'],
-            z=trace['z'],
-            mode='lines',
-            text=trace['text'],
-            textfont=dict(size=10, color=config['color']),
-            marker=dict(
-                size=5,
-                color=config['color'],
-                symbol='circle',
-                opacity=config['opacity']
-            ),
-            line=dict(
-                color=config['color'],
-                width=2
-            ),
-            opacity=config['opacity'],
-            name=f"Layer {trace['layer']} - {config['label']}"
-        ))
-
-    fig.update_layout(
-        scene=dict(
-            xaxis=dict(title="X", range=[-max_layer, max_layer]),
-            yaxis=dict(title="Y", range=[-max_layer, max_layer]),
-            zaxis=dict(title="Z", range=[-max_layer, max_layer]),
-        ),
-        title="3D Visualization with Separate Traces for Layer 1+",
-        width=1000, height=800
-    )
-
-    fig.write_html(filename)
-    print(f"Visualization with separate traces for Layer 1+ saved to {filename}.")
-
 
 
 def draw_interface(stdscr):
