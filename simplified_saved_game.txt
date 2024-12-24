@@ -1,0 +1,12 @@
+{
+  "current_layer": 0,
+  "current_axiom": "A",
+  "cursor_x": 0,
+  "cursor_y": 0,
+  "shape": "circle",
+  "grids": {
+    "0:A": [
+      "O"
+    ]
+  }
+}

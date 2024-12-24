@@ -510,7 +510,6 @@ def run(stdscr):
     go_to_layer_axiom(0, 'A')
 
     while True:
-        render_3d()
         draw_interface(stdscr)
 
         key = stdscr.getch()
@@ -588,6 +587,7 @@ if __name__ == "__main__":
 
     try:
         curses.wrapper(run)
+        render_3d()
     except KeyboardInterrupt:
         pass
     print("Exited.")
