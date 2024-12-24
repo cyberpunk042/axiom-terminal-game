@@ -83,6 +83,7 @@ def create_layer_axiom(layer, axiom):
         grid[0][0] = CENTER_CHAR
         read_only[0][0] = False
     else:
+        # Inherit data from the previous layer
         ensure_layer_axiom(layer - 1, axiom)
         prev_grid, prev_read_only = data[(layer - 1, axiom)]
         prev_dim = layer_dimension(layer - 1)
@@ -91,6 +92,7 @@ def create_layer_axiom(layer, axiom):
         for py in range(prev_dim):
             for px in range(prev_dim):
                 ch = prev_grid[py][px]
+                # If it's the center char, replace with space
                 if ch == CENTER_CHAR:
                     ch = ' '
                 grid[py + offset][px + offset] = ch
@@ -453,8 +455,7 @@ def prefill_layers(mode, fillA, fillB, fillC, fillD, fillE, fillF, fillH, fillI,
             if base_char and base_char != DEFAULT_CHAR:  # skip if empty
                 if mode == 'full':
                     for (gx, gy) in ring_coords:
-                        if base_char:
-                            grid[gy][gx] = base_char
+                        grid[gy][gx] = base_char
                 elif mode == 'partial':
                     selected = random.sample(ring_coords, total//2)
                     for (gx, gy) in selected:
@@ -464,8 +465,7 @@ def prefill_layers(mode, fillA, fillB, fillC, fillD, fillE, fillF, fillH, fillI,
                     selected = random.sample(ring_coords, total//2)
                     for (gx, gy) in selected:
                         # pick random from chars_list
-                        ch = random.choice(chars_list)
-                        ch = ch.strip()
+                        ch = random.choice(chars_list).strip()
                         if ch:
                             grid[gy][gx] = ch
 
@@ -489,7 +489,7 @@ def save_game_state(filename):
 
 def load_game_state(filename):
     """
-    Load from file into `data`, ignoring read-only details
+    Load from file into `data`, ignoring read-only details initially
     (all become read_only=False).
     """
     data.clear()
@@ -520,6 +520,30 @@ def load_game_state(filename):
             data[(layer, axiom)] = (new_grid, read_only)
         else:
             idx += 1
+
+def reapply_read_only_inheritance():
+    """
+    After loading data, re-apply the same read-only logic used in `create_layer_axiom`.
+    This makes sure that layers 1..N have their inner region marked as read-only,
+    matching the normal behavior when building layers from scratch.
+    """
+    if not data:
+        return
+    max_layer = max(k[0] for k in data.keys())
+    for layer in range(1, max_layer + 1):
+        for axiom in AXIOM_CONFIGS.keys():
+            # Only apply if both (layer, axiom) and (layer-1, axiom) exist:
+            if (layer, axiom) in data and (layer - 1, axiom) in data:
+                grid, ro = data[(layer, axiom)]
+                prev_grid, prev_ro = data[(layer - 1, axiom)]
+                prev_dim = layer_dimension(layer - 1)
+                dim = layer_dimension(layer)
+                offset = (dim - prev_dim) // 2
+
+                # Mark that inherited region as read-only:
+                for py in range(prev_dim):
+                    for px in range(prev_dim):
+                        ro[py + offset][px + offset] = True
 
 # ---------------------------------------------------------------------
 # 6) CURSES UI
@@ -576,13 +600,6 @@ if __name__ == "__main__":
     save_file = None
     load_file = None
 
-    # Example usage of fills:
-    #   --fillA=A, , , ,E --fillB=X,Y
-    # We’ll store them in FILLS dict below.
-    #   The key is the letter after '--fill'
-    #   The value is a list of strings from splitting by comma.
-    #
-    # We also do a debug print to help you see how many items got parsed.
     for arg in sys.argv:
         if arg.startswith('--save='):
             save_file = arg.split('=')[1]
@@ -597,8 +614,6 @@ if __name__ == "__main__":
         elif arg.startswith('--fill') and '=' in arg:
             # Something like '--fillA=' or '--fillB='
             # e.g. '--fillA=A, , ,C'
-            # Extract the axiom letter(s) from the part after '--fill'.
-            # E.g. '--fillA=' => key='A'
             fill_key = arg.split('=')[0][6:]  # everything after '--fill'
             fill_val_str = arg.split('=')[1]
             fill_list = fill_val_str.split(',')
@@ -615,6 +630,8 @@ if __name__ == "__main__":
     # load or prefill
     if load_file:
         load_game_state(load_file)
+        # Re-apply read-only logic after loading
+        reapply_read_only_inheritance()
     elif PREFILL:
         # each fill is passed individually
         prefill_layers(
