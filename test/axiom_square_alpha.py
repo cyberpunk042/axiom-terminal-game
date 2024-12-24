@@ -86,6 +86,28 @@ def insert_char(ch):
 
     if not read_only[gy][gx]:
         grid[gy][gx] = ch
+        
+def calculate_coordinates_cube(axiom, x, y, z):
+    if axiom == 'A':  # XY plane (top and bottom faces of the cube)
+        return x, y, z
+    elif axiom == 'B':  # YZ plane (front and back faces of the cube)
+        return z, x, y
+    elif axiom == 'C':  # XZ plane (left and right faces of the cube)
+        return x, z, y
+    elif axiom == 'D':  # Diagonal face 1
+        return x, y, x + y + z
+    elif axiom == 'E':  # Diagonal face 2
+        return x + z, y, z
+    elif axiom == 'F':  # Diagonal face 3
+        return x, y + z, z
+    elif axiom == 'H':  # Opposite diagonal 1
+        return x, -y, z
+    elif axiom == 'I':  # Opposite diagonal 2
+        return -x, y, z
+    elif axiom == 'J':  # Opposite diagonal 3
+        return x, y, -z
+    else:
+        return 0, 0, 0
 
 def go_to_layer_axiom(layer, axiom):
     global current_layer, current_axiom, cursor_x, cursor_y
@@ -183,10 +205,10 @@ def render_3d(filename="matrix_visualization.html"):
             x=coords['x'],
             y=coords['y'],
             z=coords['z'],
-            mode='markers',
+            mode='markers+lines',
             text=coords['text'],
             textfont=dict(size=12),
-            marker=dict(size=8, color=coords['color'], symbol='circle'),
+            marker=dict(size=4, color=coords['color'], symbol='square'),
             name=f'{axiom} Plane'
         ))
 
