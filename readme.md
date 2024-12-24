@@ -18,11 +18,22 @@
    - Choose from a variety of axiom types (`A`, `B`, `C`, `D`, `E`, `F`, `H`, `I`, `J`).
    - Each axiom offers distinct grid behaviors and visual styles.
 
-4. **Stunning 3D Visualizations**
+4. **Customizable Shapes**
+   - Generate grids based on different perimeter shapes:
+     - **Circle** (default): Smooth radial grids.
+     - **Square**: Geometric, angular grids.
+     - **Polygon:N**: Specify `N` sides for complex shapes (e.g., hexagon, dodecagon).
+
+5. **Save & Load Game States**
+   - Save your current game state to a file using `--save=<filename>`.
+   - Reload and continue from a saved state with `--load=<filename>`.
+   - Consistent read-only navigation whether layers are freshly created or loaded.
+
+6. **Stunning 3D Visualizations**
    - Render layered grids in 3D with customizable perspectives.
    - Export interactive visualizations as HTML files.
 
-5. **Prefill Mode**
+7. **Prefill Mode**
    - Quickly populate grids with predefined patterns or randomized characters for faster exploration.
 
 ---
@@ -62,13 +73,31 @@ python layer_axiom_game.py
 ```
 
 ### Optional Arguments
+- `--shape=<shape>`: Specify the perimeter shape for grids:
+  - `circle` (default): Radial grids.
+  - `square`: Square perimeter grids.
+  - `polygon:N`: N-sided polygon grids (e.g., `polygon:6` for a hexagon).
 - `--prefill`: Prefill layers with default or custom patterns.
 - `--fillX=<values>`: Specify custom fill characters for axiom X (e.g., `--fillA=X,Y,Z`).
 - `--mode=<mode>`: Choose prefill mode (`full`, `partial`, `random`).
+- `--save=<filename>`: Save the current game state to a file.
+- `--load=<filename>`: Load a previously saved game state.
 
-### Example
+### Examples
+
+#### Start with a Custom Shape
 ```bash
-python layer_axiom_game.py --prefill --fillA=X,Y,Z --fillB=A,B --mode=full
+python layer_axiom_game.py --shape=square --prefill --fillA=X,Y,Z --fillB=A,B --mode=full
+```
+
+#### Save Your Progress
+```bash
+python layer_axiom_game.py --shape=circle --save=game_state.txt
+```
+
+#### Reload and Continue
+```bash
+python layer_axiom_game.py --load=game_state.txt
 ```
 
 ---
@@ -77,7 +106,7 @@ python layer_axiom_game.py --prefill --fillA=X,Y,Z --fillB=A,B --mode=full
 
 ### 1. Visualization Modes
 Define how each layer is rendered:
-- **Options**: `lines`, `markers`, `text`, `markers+lines`
+- **Options**: `lines`, `markers`, `text`, `lines+markers`
 - Configure modes for specific layers (e.g., `Layer 0`, `Layer 1+`).
 
 ### 2. Axiom Settings
@@ -109,14 +138,24 @@ Set overall preferences:
 
 ## 📖 Example Usage
 
-Start the game:
+### Generate a Complex Grid
 ```bash
-python layer_axiom_game.py
+python layer_axiom_game.py --shape=polygon:12 --prefill --fillA=X --fillB=Y --fillC=Z --mode=partial
 ```
 
-Navigate the grid, switch axioms, and add characters to experiment with different grid behaviors.
+### Save and Reload
+Save the game state:
+```bash
+python layer_axiom_game.py --shape=circle --save=my_game.txt
+```
+
+Reload the saved state:
+```bash
+python layer_axiom_game.py --load=my_game.txt
+```
 
 ### View the 3D Visualization
+After exiting, open the exported visualization:
 ```bash
 open matrix_visualization.html
 ```
@@ -125,4 +164,4 @@ open matrix_visualization.html
 
 ## ✨ Explore, Create, Visualize!
 
-Unleash your creativity and dive into the world of layered grids and axioms. Enjoy the journey! 🎮
+Unleash your creativity and dive into the world of layered grids and axioms. Whether exploring radial grids, polygons, or saving and reloading intricate designs, this game offers endless possibilities for simulation and visualization. Enjoy the journey! 🎮
